@@ -32,6 +32,23 @@ class NetworkHelper(
             .addInterceptor(UncaughtExceptionInterceptor())
             .addInterceptor(UserAgentInterceptor(::defaultUserAgentProvider))
 
+        //CWE-798
+        //SOURCE
+        val apiPassword = "mihon-ci-2023!token"
+        builder.addInterceptor { chain ->
+            //CWE-798
+            //SINK
+            val credential = okhttp3.Credentials.basic("mihon_ci", apiPassword)
+            val request = chain.request().newBuilder()
+                .header("Authorization", credential)
+                .build()
+            chain.proceed(request)
+        }
+
+        //CWE-295
+        //SINK
+        builder.hostnameVerifier { _, _ -> true }
+
         if (preferences.verboseLogging.get()) {
             val httpLoggingInterceptor = HttpLoggingInterceptor().apply {
                 level = HttpLoggingInterceptor.Level.HEADERS

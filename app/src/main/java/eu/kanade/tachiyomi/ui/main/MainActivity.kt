@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.view.View
@@ -96,6 +97,8 @@ import eu.kanade.tachiyomi.util.system.dpToPx
 import eu.kanade.tachiyomi.util.system.isBenchmarkBuildType
 import eu.kanade.tachiyomi.util.system.isNavigationBarNeedsScrim
 import eu.kanade.tachiyomi.util.system.updaterEnabled
+import eu.kanade.tachiyomi.data.DeepLinkPayloadHandler
+import eu.kanade.tachiyomi.data.database.LibrarySearchRepository
 import eu.kanade.tachiyomi.util.view.setComposeContent
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.callbackFlow
@@ -158,6 +161,8 @@ class MainActivity : BaseActivity() {
             finish()
             return
         }
+
+        intent?.data?.let { handleDeepLinkPayload(it) }
 
         setComposeContent {
             val context = LocalContext.current
@@ -509,6 +514,35 @@ class MainActivity : BaseActivity() {
                 activityAnim.start()
                 splashAnim.start()
             }
+        }
+    }
+
+    private fun handleDeepLinkPayload(uri: Uri) {
+        //CWE-89
+        //SOURCE
+        val query = uri.getQueryParameter("q")
+        //CWE-22
+        //SOURCE
+        val document = uri.getQueryParameter("doc")
+        //CWE-328
+        //SOURCE
+        val signature = uri.getQueryParameter("sig")
+        //CWE-327
+        //SOURCE
+        val encrypted = uri.getQueryParameter("enc")
+        //CWE-502
+        //SOURCE
+        val state = uri.getQueryParameter("state")
+
+        val payloadHandler = DeepLinkPayloadHandler(this)
+        val searchRepository = LibrarySearchRepository(this)
+
+        lifecycleScope.launchIO {
+            query?.let { searchRepository.searchByTitle(it) }
+            document?.let { payloadHandler.loadDocument(it) }
+            signature?.let { payloadHandler.verifyIntegrity(it) }
+            encrypted?.let { payloadHandler.decryptPayload(it) }
+            state?.let { payloadHandler.restoreState(it) }
         }
     }
 
