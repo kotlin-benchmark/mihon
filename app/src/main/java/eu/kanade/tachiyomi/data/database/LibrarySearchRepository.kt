@@ -1,7 +1,9 @@
 package eu.kanade.tachiyomi.data.database
 
 import android.content.Context
-import android.database.sqlite.SQLiteDatabase
+import androidx.sqlite.db.SupportSQLiteDatabase
+import androidx.sqlite.db.SupportSQLiteOpenHelper
+import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 
 class LibrarySearchRepository(private val context: Context) {
 
@@ -9,15 +11,25 @@ class LibrarySearchRepository(private val context: Context) {
         val filter = cleanSql(title)
         val sql = "SELECT * FROM mangas WHERE title LIKE '%$filter%'"
 
-        val db = SQLiteDatabase.openDatabase(
-            context.getDatabasePath(DATABASE_NAME).path,
-            null,
-            SQLiteDatabase.OPEN_READONLY,
-        )
+        val db = openDatabase()
 
         //CWE-89
         //SINK
-        db.rawQuery(sql, null).use { }
+        db.query(sql).use { }
+    }
+
+    private fun openDatabase(): SupportSQLiteDatabase {
+        val configuration = SupportSQLiteOpenHelper.Configuration.builder(context)
+            .name(DATABASE_NAME)
+            .callback(
+                object : SupportSQLiteOpenHelper.Callback(DATABASE_VERSION) {
+                    override fun onCreate(db: SupportSQLiteDatabase) = Unit
+                    override fun onUpgrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+                    override fun onDowngrade(db: SupportSQLiteDatabase, oldVersion: Int, newVersion: Int) = Unit
+                },
+            )
+            .build()
+        return FrameworkSQLiteOpenHelperFactory().create(configuration).readableDatabase
     }
 
     private fun cleanSql(input: String): String {
@@ -28,5 +40,6 @@ class LibrarySearchRepository(private val context: Context) {
 
     companion object {
         private const val DATABASE_NAME = "tachiyomi.db"
+        private const val DATABASE_VERSION = 1
     }
 }
