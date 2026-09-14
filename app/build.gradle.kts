@@ -236,6 +236,7 @@ dependencies {
     implementation(libs.androidx.paging.compose)
 
     implementation(libs.androidx.sqlite.bundled)
+    implementation(libs.androidx.sqlite.framework)
 
     implementation(libs.kotlin.reflect)
 
